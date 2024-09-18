@@ -12,25 +12,25 @@ class MamboretaAdmin(MamboretaAdminAbstract):
     def procesar_archivo(self, ruta: str) -> None:
         try:
             datos = pd.read_csv(ruta)
-            for fila in datos.iterrows():
+            for index, fila in datos.iterrows():
                 try:
                     pelicula = Pelicula(
-                    id=int(fila['id']),
-                    titulo=str(fila['title']),
-                    fecha_publicacion=pd.to_datetime(fila['release_date']),
-                    retorno=float(fila['revenue']),
-                    duracion_minutos=int(fila['runtime']),
-                    presupuesto=float(fila['budget']),
-                    sitio_web=str(fila['homepage']),
-                    idioma_original=str(fila['original_language']),
-                    poster=str(fila['Poster_Link']),
-                    rating=float(fila['IMDB_Rating']),
-                    famosos_list=[Persona(nombre) for nombre in fila[['Star1', 'Star2', 'Star3', 'Star4']] if isinstance(nombre, str)],
-                    generos_list=[Genero(nombre) for nombre in fila['genres_list'] if isinstance(nombre, str)],
-                    persona= Persona(fila),
-                    genero = Genero(fila)
-                    )
+                        int(fila['id']),
+                        str(fila['title']),
+                        pd.to_datetime(fila['release_date']),
+                        float(fila['revenue']),
+                        int(fila['runtime']),
+                        float(fila['budget']),
+                        str(fila['homepage']),
+                        str(fila['original_language']),
+                        str(fila['Poster_Link']),
+                        float(fila['IMDB_Rating']),
+                        [Persona(nombre) for nombre in fila[['Star1', 'Star2', 'Star3', 'Star4']] if isinstance(nombre, str)],
+                        [Genero(genero.strip("[]'")) for genero in fila.get('genres_list', '').split(', ')]
+                        # [Genero(nombre.strip().replace('[', '').replace(']', '')) for nombre in fila['genres_list'].split(',') if nombre.strip()]
+                        )
                     self.lista.append(pelicula)
+                   
 
                 except ValueError as e:
                     print(f"Error de valor en la fila {fila}: {e}")
@@ -47,34 +47,28 @@ class MamboretaAdmin(MamboretaAdminAbstract):
     def __str__(self) -> str:
         resultado = '\n'.join([str(pelicula) for pelicula in self.lista])
         return resultado
-    
+
     def filtrar_por_genero(self, genero: Genero) -> List[Pelicula]:
         peliculas_por_genero = []
         for pelicula in self.lista:
-            if isinstance(pelicula, Pelicula):
-                generos_list = pelicula.generos_list
-                if genero in generos_list:
-                    peliculas_por_genero.append(pelicula)
+            if genero in pelicula.generos_list:
+                peliculas_por_genero.append(pelicula)            
         return peliculas_por_genero
-    
-    
 
     def filtrar_por_persona(self, persona: Persona) -> List[Pelicula]:
         peliculas_por_persona = []
         for pelicula in self.lista:
             famosos_list = pelicula.famosos_list
-            if persona in famosos_list:
+            if persona.nombre in [persona.nombre for persona in pelicula.famosos_list]:
                 peliculas_por_persona.append(pelicula)
         return peliculas_por_persona
-    
-        
+
     def filtrar_companieros(self, persona1: Persona, persona2: Persona) -> List[Pelicula]:
         peliculas_companieros = []
         for pelicula in self.lista:
             famosos_list = pelicula.famosos_list
             if persona1 in famosos_list and persona2 in famosos_list:
                 peliculas_companieros.append(pelicula)
-
         return peliculas_companieros
     
     def top_n(self, n: int = 50) -> List[Pelicula]:
